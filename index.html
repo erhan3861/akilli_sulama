@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modül 6 — Suyu Doğru Kullan: Akıllı Sulama</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Nunito',sans-serif}
+body{background:linear-gradient(160deg,#0d2137 0%,#0a3d62 50%,#0d2137 100%);display:flex;flex-direction:column;color:white}
+
+.header{background:rgba(0,0,0,0.4);border-bottom:2px solid rgba(100,200,255,0.2);padding:8px 24px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.badge{background:rgba(100,200,255,0.2);border:1px solid rgba(100,200,255,0.5);color:#64c8ff;font-size:10px;font-weight:800;letter-spacing:2px;padding:4px 12px;border-radius:3px}
+.header h1{font-size:16px;font-weight:800;color:#e0f4ff}
+.hud{display:flex;gap:20px}
+.hud-item{text-align:center}
+.hud-v{font-family:'Bebas Neue',cursive;font-size:24px;color:#64c8ff;line-height:1}
+.hud-l{font-size:9px;color:rgba(224,244,255,0.4);letter-spacing:1.5px;text-transform:uppercase}
+
+.main{flex:1;display:grid;grid-template-columns:220px 1fr 240px;overflow:hidden;min-height:0}
+
+/* LEFT: Field + Tank */
+.left-col{
+  background:rgba(0,0,0,0.25);
+  border-right:1px solid rgba(100,200,255,0.1);
+  padding:12px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.col-title{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(100,200,255,0.5);margin-bottom:6px}
+
+/* Water tank */
+.tank-wrap{background:rgba(0,0,0,0.3);border-radius:12px;padding:12px;border:1px solid rgba(100,200,255,0.15)}
+.tank-body{
+  position:relative;height:80px;
+  background:rgba(255,255,255,0.05);
+  border:2px solid rgba(100,200,255,0.3);
+  border-radius:6px 6px 14px 14px;
+  overflow:hidden;
+}
+.tank-water{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,rgba(100,200,255,0.7),rgba(0,100,200,0.9));
+  transition:height 1s ease;
+  border-radius:0 0 12px 12px;
+}
+.tank-label{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',cursive;font-size:24px;color:white;
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);z-index:1;
+}
+.tank-info{display:flex;justify-content:space-between;font-size:11px;margin-top:6px;color:rgba(224,244,255,0.6)}
+
+/* Field parcels */
+.field-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.parcel{
+  aspect-ratio:1;border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:14px;position:relative;
+  transition:all 0.5s;border:1px solid rgba(255,255,255,0.1);
+  cursor:default;
+}
+.parcel-val{font-size:8px;font-weight:800;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.8)}
+.parcel-wet{background:linear-gradient(135deg,#1e5f3a,#2e7d32)}
+.parcel-ok{background:linear-gradient(135deg,#2d6a2d,#388e3c)}
+.parcel-dry{background:linear-gradient(135deg,#8b6914,#a0522d);animation:dryPulse 2s ease-in-out infinite}
+.parcel-crit{background:linear-gradient(135deg,#5a2d0a,#8b3a1a);animation:dryPulse 1s ease-in-out infinite}
+@keyframes dryPulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* CENTER: Scenario */
+.center-col{
+  padding:14px;
+  display:flex;flex-direction:column;
+  gap:10px;
+  overflow:hidden;min-height:0;
+}
+
+.scenario-card{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(100,200,255,0.2);
+  border-radius:16px;
+  padding:16px;
+  flex-shrink:0;
+}
+.sc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.sc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.sc-badge{font-size:10px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:20px;display:inline-block;margin-bottom:5px}
+.sc-title{font-size:17px;font-weight:800;line-height:1.2}
+
+.ai-box{
+  background:rgba(100,200,255,0.08);
+  border-left:3px solid #64c8ff;
+  border-radius:0 10px 10px 0;
+  padding:10px 14px;
+  margin-bottom:10px;
+}
+.ai-header{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.ai-dot{width:22px;height:22px;background:linear-gradient(135deg,#64c8ff,#0077b6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 0 8px rgba(100,200,255,0.5)}
+.ai-name{font-size:11px;font-weight:800;color:#64c8ff;letter-spacing:0.5px}
+.ai-text{font-size:13px;color:rgba(224,244,255,0.85);line-height:1.5}
+.ai-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.chip-red{background:rgba(255,68,68,0.2);border:1px solid rgba(255,68,68,0.5);color:#ff9999}
+.chip-orange{background:rgba(255,179,0,0.2);border:1px solid rgba(255,179,0,0.4);color:#ffd54f}
+.chip-blue{background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#90caf9}
+.chip-green{background:rgba(100,255,150,0.15);border:1px solid rgba(100,255,150,0.4);color:#a5d6a7}
+
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt-btn{
+  background:rgba(255,255,255,0.06);
+  border:2px solid rgba(255,255,255,0.12);
+  border-radius:12px;padding:10px 12px;
+  cursor:pointer;text-align:left;
+  transition:all 0.2s;color:white;
+  font-family:'Nunito',sans-serif;
+}
+.opt-btn:hover{border-color:rgba(100,200,255,0.5);background:rgba(100,200,255,0.1);transform:translateY(-2px)}
+.opt-emoji{font-size:20px;display:block;margin-bottom:4px}
+.opt-label{font-size:13px;font-weight:800;margin-bottom:2px}
+.opt-desc{font-size:11px;color:rgba(224,244,255,0.55);line-height:1.3}
+.opt-btn.correct{border-color:#66bb6a;background:rgba(102,187,106,0.15)}
+.opt-btn.wrong{border-color:#ef5350;background:rgba(239,83,80,0.12)}
+.opt-btn.disabled{pointer-events:none;opacity:0.6}
+
+.progress-bar-wrap{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;flex-shrink:0}
+.progress-bar{height:100%;background:linear-gradient(90deg,#64c8ff,#00e5ff);border-radius:2px;transition:width 0.5s}
+
+/* RIGHT: Score + History */
+.right-col{
+  background:rgba(0,0,0,0.25);
+  border-left:1px solid rgba(100,200,255,0.1);
+  padding:12px;
+  display:flex;flex-direction:column;gap:10px;
+  overflow:hidden;
+}
+.score-ring{
+  background:rgba(0,0,0,0.3);
+  border-radius:12px;padding:12px;
+  text-align:center;border:1px solid rgba(100,200,255,0.15);
+}
+.score-big{font-family:'Bebas Neue',cursive;font-size:52px;color:#64c8ff;line-height:1}
+.score-sub{font-size:10px;color:rgba(224,244,255,0.4);letter-spacing:1.5px;margin-bottom:8px}
+.score-bars{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.sbar-row{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700}
+.sbar-label{width:60px;text-align:right;color:rgba(224,244,255,0.5);font-size:10px}
+.sbar-track{flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:3px;transition:width 0.8s}
+.sbar-val{width:30px;font-size:10px;color:#64c8ff;font-family:'Bebas Neue',cursive}
+
+.history-box{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;min-height:0}
+.hist-item{background:rgba(255,255,255,0.04);border-radius:8px;padding:7px 10px;font-size:11px;animation:hiIn 0.3s ease;line-height:1.4}
+@keyframes hiIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.hist-item.ok{border-left:3px solid #66bb6a;color:#c8e6c9}
+.hist-item.fail{border-left:3px solid #ef5350;color:#ffcdd2}
+
+/* Result modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s}
+.modal.show{opacity:1;pointer-events:all}
+.modal-card{background:linear-gradient(145deg,#0d2137,#0a3d62);border:1px solid rgba(100,200,255,0.3);border-radius:20px;padding:28px;max-width:420px;width:90%;text-align:center;transform:scale(0.85);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+.modal.show .modal-card{transform:scale(1)}
+.modal-icon{font-size:56px;display:block;margin-bottom:10px;animation:iconBounce 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both}
+@keyframes iconBounce{from{transform:scale(0)rotate(-20deg)}to{transform:scale(1)rotate(0)}}
+.modal-title{font-size:24px;font-weight:900;margin-bottom:8px}
+.modal-ok{color:#66bb6a}
+.modal-fail{color:#ef5350}
+.modal-exp{font-size:13px;color:rgba(224,244,255,0.8);line-height:1.6;margin-bottom:14px}
+.modal-effects{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px}
+.eff-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.eff-pos{background:rgba(102,187,106,0.2);border:1px solid #66bb6a;color:#a5d6a7}
+.eff-neg{background:rgba(239,83,80,0.2);border:1px solid #ef5350;color:#ffcdd2}
+.modal-lesson{background:rgba(100,200,255,0.1);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left}
+.lesson-title{font-size:10px;font-weight:800;letter-spacing:1.5px;color:#64c8ff;text-transform:uppercase;margin-bottom:5px}
+.lesson-text{font-size:12px;color:rgba(224,244,255,0.75);line-height:1.5}
+.modal-btn{background:linear-gradient(135deg,#0077b6,#023e8a);color:white;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;border:none;padding:12px 32px;border-radius:30px;cursor:pointer;box-shadow:0 4px 16px rgba(0,119,182,0.5);transition:all 0.2s}
+.modal-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,119,182,0.6)}
+
+/* End screen */
+.end-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0d2137,#0a3d62);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;display:none}
+.end-screen.show{display:flex}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="badge">MODÜL 6</span>
+    <h1>💧 Suyu Doğru Kullan: Akıllı Sulama</h1>
+  </div>
+  <div class="hud">
+    <div class="hud-item"><div class="hud-v" id="waterLeft">80</div><div class="hud-l">SU (L)</div></div>
+    <div class="hud-item"><div class="hud-v" id="healthVal">100</div><div class="hud-l">TARLA SAĞLIĞI</div></div>
+    <div class="hud-item"><div class="hud-v" id="scoreVal">0</div><div class="hud-l">PUAN</div></div>
+    <div class="hud-item"><div class="hud-v" id="scNum">1</div><div class="hud-l">SENARYO</div></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="left-col">
+    <div>
+      <div class="col-title">💧 Su Deposu</div>
+      <div class="tank-wrap">
+        <div class="tank-body">
+          <div class="tank-water" id="tankWater" style="height:80%"></div>
+          <div class="tank-label" id="tankLabel">80L</div>
+        </div>
+        <div class="tank-info"><span>0L</span><span id="tankPct">%100</span><span>80L</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="col-title">🗺️ Tarla Nem Haritası</div>
+      <div class="field-grid" id="fieldGrid"></div>
+    </div>
+    <div style="margin-top:auto">
+      <div class="col-title">🌈 Nem Seviyeleri</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:11px">
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:#1e5f3a"></div><span>Aşırı Nemli</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:#2d6a2d"></div><span>Optimal</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:#8b6914"></div><span>Kuru — Uyarı</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:#5a2d0a"></div><span>Kritik Kuru</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="center-col">
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="scenario-card" id="scenarioCard">
+      <div style="text-align:center;padding:20px;opacity:0.5">Yükleniyor...</div>
+    </div>
+    <div class="options-grid" id="optionsGrid"></div>
+  </div>
+
+  <div class="right-col">
+    <div class="score-ring">
+      <div class="score-big" id="scoreBig">0</div>
+      <div class="score-sub">TOPLAM PUAN</div>
+      <div class="score-bars">
+        <div class="sbar-row"><div class="sbar-label">Su</div><div class="sbar-track"><div class="sbar-fill" id="sbarWater" style="width:100%;background:#64c8ff"></div></div><div class="sbar-val" id="sbarWV">80</div></div>
+        <div class="sbar-row"><div class="sbar-label">Sağlık</div><div class="sbar-track"><div class="sbar-fill" id="sbarHealth" style="width:100%;background:#66bb6a"></div></div><div class="sbar-val" id="sbarHV">100</div></div>
+        <div class="sbar-row"><div class="sbar-label">Verim</div><div class="sbar-track"><div class="sbar-fill" id="sbarYield" style="width:60%;background:#ffb300"></div></div><div class="sbar-val" id="sbarYV">60</div></div>
+      </div>
+    </div>
+    <div class="col-title">📋 Karar Geçmişi</div>
+    <div class="history-box" id="histBox"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <span class="modal-icon" id="mIcon">✅</span>
+    <div class="modal-title" id="mTitle">Doğru!</div>
+    <p class="modal-exp" id="mExp"></p>
+    <div class="modal-effects" id="mEffects"></div>
+    <div class="modal-lesson"><div class="lesson-title">💡 Öğrenme Notu</div><div class="lesson-text" id="mLesson"></div></div>
+    <button class="modal-btn" id="mBtn" onclick="nextScenario()">Devam →</button>
+  </div>
+</div>
+
+<div class="end-screen" id="endScreen">
+  <div style="font-size:64px" id="eTrophy">💧</div>
+  <h2 style="font-family:'Bebas Neue',cursive;font-size:44px;color:#64c8ff" id="eTitle">Sezon Tamamlandı!</h2>
+  <p style="font-size:15px;color:rgba(224,244,255,0.7);max-width:400px;line-height:1.6" id="eSub"></p>
+  <div style="font-family:'Bebas Neue',cursive;font-size:72px;color:white" id="eScore">0</div>
+  <div style="font-size:12px;color:rgba(224,244,255,0.4);letter-spacing:2px">/ 600 PUAN</div>
+  <button class="modal-btn" onclick="location.reload()">🔄 Tekrar Oyna</button>
+</div>
+
+<script>
+let state={water:80,health:100,score:0,yield:60,scIdx:0};
+
+const scenarios=[
+  {icon:'💧',iconBg:'rgba(100,200,255,0.2)',badge:'🚨 KRİTİK',badgeCls:'background:rgba(255,68,68,0.25);color:#ff9999',
+   title:'Toprak Nemi Kritik!',
+   ai:'Sensörler alarm veriyor! D3 ve E2 parsellerinde toprak nemi %19\'a düştü. 36°C sıcaklık ve nem %32. Buğday susuzluk stresine girdi.',
+   chips:[{t:'Nem: %19',c:'chip-red'},{t:'Sıcaklık: 36°C',c:'chip-orange'},{t:'Rüzgar: 8km/h',c:'chip-blue'}],
+   opts:[{e:'🚿',l:'Hemen Sulama (20L)',d:'Tüm kritik parsellere sulama yap.',correct:true},
+         {e:'⏳',l:'Yarın Sula',d:'Biraz bekle, akşam daha serin.',correct:false},
+         {e:'🧪',l:'Gübre Ver',d:'Besin eksikliği var gibi.',correct:false},
+         {e:'🔍',l:'İzle, Bekle',d:'Sensör yanılıyor olabilir.',correct:false}],
+   exp:{c:'Toprak nemi %19 kritik sınır! Hızlı sulama hasarı önler.',w0:'36°C\'de 1 gün beklemek hasatı %15 düşürür!',w1:'Su eksikliğinde gübre işe yaramaz, zararı artar.',w2:'3 sensör aynı anda alarm verince yanılma ihtimali çok düşük.'},
+   effects:{c:{water:-20,health:+5,yield:+8,score:100},w:{water:0,health:-15,yield:-12,score:0}},
+   lesson:'Buğdayda kritik nem eşiği %22\'dir. Altında stoma kapanır, fotosentez durur. Erken müdahale her zaman kazandırır.'},
+  {icon:'🌧️',iconBg:'rgba(100,200,255,0.15)',badge:'⚠️ KARAR',badgeCls:'background:rgba(255,179,0,0.2);color:#ffd54f',
+   title:'Yağmur Öncesi Sulama Planı',
+   ai:'5 saate yağmur bekleniyor (%85 ihtimal). Bazı parseller %42 nemde — normal ama hafif kuru. Zamanlama kritik!',
+   chips:[{t:'Yağmur: 5 saat',c:'chip-blue'},{t:'Nem: %42',c:'chip-orange'},{t:'İhtimal: %85',c:'chip-green'}],
+   opts:[{e:'⏸️',l:'Sulamayı Ertele',d:'Yağmur gelecek, suyu tasarruf et.',correct:true},
+         {e:'🚿',l:'Hemen Sula (15L)',d:'Geç kalma ihtimaline karşı sula.',correct:false},
+         {e:'💧',l:'Az Sulama (5L)',d:'Çok az vererek orta yol bul.',correct:false},
+         {e:'📱',l:'2. Hava Tahmini Al',d:'%85 kesin değil, başka kaynak kontrol et.',correct:false}],
+   exp:{c:'Mükemmel! Yağmur gelirse suyu israf etmiş olurdun. Tasarruf kritik.',w0:'Yağmur + sulama = toprak doygun → kök çürümesi riski!',w1:'Orta yol mantıklı görünür ama yağmur gelirse yine israf.',w2:'İkinci kaynak iyi ama aksiyon almak da önemli. Yine de beklemek en iyisi.'},
+   effects:{c:{water:0,health:+3,yield:+5,score:100},w:{water:-15,health:-3,yield:0,score:20}},
+   lesson:'Su yönetiminde hava tahmini entegrasyonu %35 su tasarrufu sağlar. Akıllı sulama sistemleri tam da bu yüzden hava API\'sine bağlanır.'},
+  {icon:'🌙',iconBg:'rgba(100,100,255,0.2)',badge:'💡 STRATEJİ',badgeCls:'background:rgba(100,100,255,0.2);color:#c5cae9',
+   title:'Optimal Sulama Zamanı Seçimi',
+   ai:'Su deposu %40\'a düştü (32L). Tarlada 3 parsel kritik. Saat şu an 14:30, güneş tepede. Ne zaman sulama yapmalısın?',
+   chips:[{t:'Su: 32L (%40)',c:'chip-orange'},{t:'Saat: 14:30',c:'chip-red'},{t:'Buharlaşma: Yüksek',c:'chip-red'}],
+   opts:[{e:'🌙',l:'Gece/Sabah Sula (22:00)',d:'Daha serin, buharlaşma minimal.',correct:true},
+         {e:'☀️',l:'Şimdi Sula (14:30)',d:'Kritik bölgeler acil müdahale istiyor.',correct:false},
+         {e:'🌅',l:'Akşam Sula (19:00)',d:'Sıcaklık biraz düşer.',correct:false},
+         {e:'💡',l:'Damla Sistemine Geç',d:'Kök hedefli, buharlaşma yok.',correct:false}],
+   exp:{c:'Gece sulaması buharlaşmayı %60 azaltır — 32L ile çok daha fazlasını yaparsın.',w0:'14:30\'da sulama: suyu %40\'ı buharlaşır, israf!',w1:'19:00 orta seçenek ama gece daha iyi. Ayrıca gece nemi fungal risk yaratabilir — damla sistem ile kombine en ideal.',w2:'Harika! Damla sistem de doğru ama ilk seçenek mevcut altyapıyla en pratik.'},
+   effects:{c:{water:-8,health:+6,yield:+7,score:100},w0:{water:-20,health:+2,yield:+3,score:20},w:{water:-12,health:+4,yield:+4,score:60}},
+   lesson:'Sabah erken (06:00-08:00) veya gece sulama; gün ortası sulamaya göre %30-60 daha az su kullanır. Damla sulama ile kombine ederek %70\'e kadar tasarruf mümkün.',},
+  {icon:'🏜️',iconBg:'rgba(255,150,0,0.15)',badge:'🚨 KRİTİK',badgeCls:'background:rgba(255,68,68,0.25);color:#ff9999',
+   title:'Su Deposu Kritik — Öncelik Sırala!',
+   ai:'Sadece 15L su kaldı! 3 parsel kritik, hepsine yetmez. Hangi parseli önce sularsın? Buğday başak döneminde.',
+   chips:[{t:'Su: 15L',c:'chip-red'},{t:'3 Kritik Parsel',c:'chip-orange'},{t:'Başak Dönemi',c:'chip-blue'}],
+   opts:[{e:'🌾',l:'Başak Bağlayan Parseller',d:'Başak dönemindeki bitkilere öncelik.',correct:true},
+         {e:'📐',l:'Eşit Dağıt',d:'3 parsele 5L\'şer dağıt.',correct:false},
+         {e:'🎲',l:'En Büyük Parsel',d:'Büyük alanda daha fazla bitki kurtarılır.',correct:false},
+         {e:'⛔',l:'Sulamayı Durdur',d:'Yağmur bekliyoruz, suyu sakla.',correct:false}],
+   exp:{c:'Başak dönemi buğdayın en kritik su ihtiyacı aşamasıdır. Su stresi bu dönemde verim kaybına doğrudan yol açar.',w0:'5L eşit dağıtımda hiçbir parsel yeterli su almaz.',w1:'Büyük parsel mantıklı görünür ama gelişim dönemi daha kritik.',w2:'Mevcut kuruluğu beklemek kalıcı hasar yaratır.'},
+   effects:{c:{water:-15,health:+4,yield:+10,score:100},w:{water:-15,health:-8,yield:-10,score:10}},
+   lesson:'Tarımda "kısıtlı kaynakla maksimum verim" en kritik beceridir. Buğdayın su ihtiyacı; çimlenme, kardeşlenme ve başak döneminde pik yapar. Bu dönemlere su kesmek en kritik kayba yol açar.'},
+  {icon:'🌧️',iconBg:'rgba(0,180,100,0.2)',badge:'✅ FIRSATLAR',badgeCls:'background:rgba(100,200,100,0.2);color:#a5d6a7',
+   title:'Yağmur Suyu Toplama Fırsatı!',
+   ai:'Şiddetli yağmur geliyor (48mm beklenti). Hasat 10 gün sonra. Yağmur suyunu değerlendirmek için ne yapmalısın?',
+   chips:[{t:'Yağış: 48mm',c:'chip-blue'},{t:'Hasat: 10 gün',c:'chip-green'},{t:'Depolar: Dolu',c:'chip-green'}],
+   opts:[{e:'🏗️',l:'Geçici Toplama Havuzu',d:'Yağmur suyunu depola, gelecek için kullan.',correct:true},
+         {e:'🚿',l:'Ekstra Sulama Yap',d:'Yağmuru fırsat bil, ek sulama ekle.',correct:false},
+         {e:'📊',l:'Sadece Kaydet',d:'Veriyi kaydet, başka eylem yok.',correct:false},
+         {e:'🧂',l:'Gübre Ekle',d:'Yağmurla gübre karışımını topla.',correct:false}],
+   exp:{c:'Yağmur suyu toplaması sürdürülebilir tarımın temelidir. Topladığın su kurak dönemlerde hayat kurtarır.',w0:'Depolar dolu + yağmur + ek sulama = tarlayı bastırırsın, kök çürümesi!',w1:'Kaydedip kaydetmemek önemli ama aksiyon almak daha değerli.',w2:'Gübre + yağmur toplaması hem dağıtımı bozar hem tuzlanma yaratır.'},
+   effects:{c:{water:+25,health:+5,yield:+3,score:100},w:{water:-10,health:-8,yield:-5,score:10}},
+   lesson:'Yağmur suyu hasadı (rainwater harvesting) gelişmekte olan ülkelerde su krizini çözmenin anahtarıdır. 1 ha tarla, 1mm yağışta = 10.000 litre su depolar!'},
+  {icon:'📊',iconBg:'rgba(100,200,255,0.15)',badge:'🎓 SON GÖREV',badgeCls:'background:rgba(100,200,255,0.2);color:#90caf9',
+   title:'Sezon Sonu Değerlendirmesi',
+   ai:'Sezon bitti! Su verimliliğin çok iyi. Gelecek sezon için en önemli yatırım kararın ne olmalı?',
+   chips:[{t:'Verim: İyi',c:'chip-green'},{t:'Su: Tasarruflu',c:'chip-blue'},{t:'Bütçe: Sınırlı',c:'chip-orange'}],
+   opts:[{e:'💧',l:'Damla Sulama Sistemi',d:'%50 su tasarrufu, kalıcı yatırım.',correct:true},
+         {e:'🤖',l:'AI Sulama Yazılımı',d:'Otomatik karar algoritması.',correct:false},
+         {e:'🌦️',l:'Hava İstasyonu',d:'Tarla bazında meteoroloji verisi.',correct:false},
+         {e:'🔬',l:'Toprak Sensörleri',d:'Gerçek zamanlı nem takibi.',correct:false}],
+   exp:{c:'Damla sulama: hem en yüksek ROI (yatırım getirisi), hem de en somut su tasarrufu sağlar. Diğerleri de değerli ama önce temel!',w0:'AI yazılım güçlü ama altyapı olmadan verimli çalışamaz.',w1:'Hava istasyonu değerli ama sulama sistemine ek olarak kullanılır.',w2:'Sensörler de kritik — zaten bu eğitimde kullandık!'},
+   effects:{c:{water:+10,health:+10,yield:+15,score:100},w:{water:0,health:+5,yield:+8,score:60}},
+   lesson:'Damla sulama sistemi kurulum maliyetini 3-5 yılda geri öder. Türkiye\'de ortalama %35-50 su tasarrufu + %15-25 verim artışı sağladığı kanıtlanmıştır.'},
+];
+
+function buildField(){
+  const g=document.getElementById('fieldGrid');
+  g.innerHTML='';
+  const levels=['🌾','🌿','🌱','🌾'];
+  for(let i=0;i<12;i++){
+    const c=document.createElement('div');
+    const nem=30+Math.random()*60;
+    const cls=nem>70?'parcel-wet':nem>45?'parcel-ok':nem>30?'parcel-dry':'parcel-crit';
+    c.className=`parcel ${cls}`;
+    c.innerHTML=`${levels[i%4]}<span class="parcel-val">${Math.round(nem)}%</span>`;
+    g.appendChild(c);
+  }
+}
+
+function updateUI(){
+  document.getElementById('waterLeft').textContent=Math.max(0,state.water);
+  document.getElementById('healthVal').textContent=Math.max(0,state.health);
+  document.getElementById('scoreVal').textContent=state.score;
+  document.getElementById('scoreBig').textContent=state.score;
+  const wp=Math.min(100,(state.water/80)*100);
+  document.getElementById('tankWater').style.height=wp+'%';
+  document.getElementById('tankLabel').textContent=state.water+'L';
+  document.getElementById('tankPct').textContent='%'+Math.round(wp);
+  document.getElementById('sbarWater').style.width=wp+'%';
+  document.getElementById('sbarWV').textContent=Math.max(0,state.water);
+  const hp=Math.min(100,state.health);
+  document.getElementById('sbarHealth').style.width=hp+'%';
+  document.getElementById('sbarHV').textContent=Math.max(0,state.health);
+  const yp=Math.min(100,state.yield);
+  document.getElementById('sbarYield').style.width=yp+'%';
+  document.getElementById('sbarYV').textContent=Math.max(0,state.yield);
+}
+
+function loadScenario(){
+  if(state.scIdx>=scenarios.length){showEnd();return;}
+  const sc=scenarios[state.scIdx];
+  const pct=(state.scIdx/scenarios.length)*100;
+  document.getElementById('progressBar').style.width=pct+'%';
+  document.getElementById('scNum').textContent=state.scIdx+1;
+
+  document.getElementById('scenarioCard').innerHTML=`
+    <div class="sc-top">
+      <div class="sc-icon" style="background:${sc.iconBg}">${sc.icon}</div>
+      <div>
+        <span class="sc-badge" style="${sc.badgeCls}">${sc.badge}</span>
+        <div class="sc-title">${sc.title}</div>
+      </div>
+    </div>
+    <div class="ai-box">
+      <div class="ai-header"><div class="ai-dot">🤖</div><span class="ai-name">HYDRA-AI</span></div>
+      <div class="ai-text">${sc.ai}</div>
+      <div class="ai-chips">${sc.chips.map(c=>`<span class="chip ${c.c}">${c.t}</span>`).join('')}</div>
+    </div>`;
+
+  const og=document.getElementById('optionsGrid');
+  og.innerHTML='';
+  sc.opts.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt-btn';
+    btn.innerHTML=`<span class="opt-emoji">${o.e}</span><div class="opt-label">${o.l}</div><div class="opt-desc">${o.d}</div>`;
+    btn.addEventListener('click',()=>answer(i,sc,btn));
+    og.appendChild(btn);
+  });
+}
+
+function answer(i,sc,btn){
+  const correct=sc.opts[i].correct;
+  document.querySelectorAll('.opt-btn').forEach((b,j)=>{
+    b.classList.add('disabled');
+    if(sc.opts[j].correct) b.classList.add('correct');
+    else if(j===i&&!correct) b.classList.add('wrong');
+  });
+  const fx=correct?sc.effects.c:(sc.effects.w||sc.effects.w0||sc.effects.c);
+  state.water=Math.max(0,state.water+(fx.water||0));
+  state.health=Math.min(100,Math.max(0,state.health+(fx.health||0)));
+  state.yield=Math.min(100,Math.max(0,state.yield+(fx.yield||0)));
+  state.score+=fx.score||0;
+  updateUI(); buildField();
+
+  const expKey=correct?'c':(['w0','w1','w2','w3'][i]||'w');
+  const expText=sc.exp[expKey]||sc.exp.w;
+  const effsHtml=[
+    fx.health>0?`<span class="eff-chip eff-pos">❤️ Sağlık +${fx.health}</span>`:'',
+    fx.health<0?`<span class="eff-chip eff-neg">💔 Sağlık ${fx.health}</span>`:'',
+    fx.water<0?`<span class="eff-chip eff-neg">💧 Su ${fx.water}L</span>`:'',
+    fx.water>0?`<span class="eff-chip eff-pos">💧 Su +${fx.water}L</span>`:'',
+    fx.score>0?`<span class="eff-chip eff-pos">🏆 +${fx.score}</span>`:'',
+  ].filter(Boolean).join('');
+
+  document.getElementById('mIcon').textContent=correct?'🎉':'😅';
+  document.getElementById('mTitle').className='modal-title '+(correct?'modal-ok':'modal-fail');
+  document.getElementById('mTitle').textContent=correct?'Doğru Karar!':'Yanlış Karar!';
+  document.getElementById('mExp').textContent=expText;
+  document.getElementById('mEffects').innerHTML=effsHtml;
+  document.getElementById('mLesson').textContent=sc.lesson;
+  const last=state.scIdx>=scenarios.length-1;
+  document.getElementById('mBtn').textContent=last?'🌊 Sonucu Gör!':'Devam →';
+  document.getElementById('modal').classList.add('show');
+
+  // History
+  const h=document.createElement('div');
+  h.className=`hist-item ${correct?'ok':'fail'}`;
+  h.textContent=`S${state.scIdx+1}: ${sc.opts[i].l} ${correct?'✅':'❌'}`;
+  document.getElementById('histBox').prepend(h);
+}
+
+function nextScenario(){
+  document.getElementById('modal').classList.remove('show');
+  state.scIdx++;
+  loadScenario();
+}
+
+function showEnd(){
+  const s=document.getElementById('endScreen');
+  s.classList.add('show');
+  document.getElementById('eScore').textContent=state.score;
+  const grade=state.score>=500?{t:'Su Ustası!',e:'🏆',d:'Mükemmel su yönetimi! Tarla hem verimli hem sürdürülebilir.'}:
+    state.score>=350?{t:'İyi Çiftçi',e:'🥈',d:'İyi iş! Birkaç kritik kararı gözden geçirirsen mükemmel olacaksın.'}:
+    {t:'Öğrenme Devam',e:'📚',d:'Su yönetimi zor bir konu. Tekrar dene ve notlarına bak!'};
+  document.getElementById('eTrophy').textContent=grade.e;
+  document.getElementById('eTitle').textContent=grade.t;
+  document.getElementById('eSub').textContent=grade.d;
+}
+
+buildField(); updateUI(); loadScenario();
+</script>
+</body>
+</html>
